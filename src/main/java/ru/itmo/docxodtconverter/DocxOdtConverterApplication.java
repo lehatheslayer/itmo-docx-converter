@@ -8,6 +8,7 @@ public class DocxOdtConverterApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(DocxOdtConverterApplication.class, args);
+
 	}
 
 }
