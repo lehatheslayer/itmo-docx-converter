@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <div>
+        <form method="POST" enctype="multipart/form-data" action="/upload">
+            <table>
+                <tr><td>File to upload:</td><td><input type="file" name="file" /></td></tr>
+                <tr><td></td><td><input type="submit" value="Upload" /></td></tr>
+            </table>
+            <label>
+                <select name="type">
+                    <option value="docx">docx</option>
+                    <option value="odt">odt</option>
+                </select>
+            </label>
+        </form>
+    </div>
+</body>
+</html>
