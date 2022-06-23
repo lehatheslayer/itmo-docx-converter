@@ -1,22 +1,17 @@
 package ru.itmo.docxodtconverter.controller;
 
-import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
-import org.apache.poi.xwpf.usermodel.IBodyElement;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
-import ru.itmo.docxodtconverter.service.DocumentParserService;
-
-import java.io.IOException;
-import java.util.List;
+import ru.itmo.docxodtconverter.service.ParseService;
 
 @Controller
 public class ConverterController {
-    private final DocumentParserService documentParserService;
+    private final ParseService documentParserService;
 
-    public ConverterController(DocumentParserService documentParserService) {
+    public ConverterController(ParseService documentParserService) {
         this.documentParserService = documentParserService;
     }
 
@@ -32,8 +27,7 @@ public class ConverterController {
         System.out.println(type);
 
         try {
-            List<IBodyElement> elements = documentParserService.parse(file);
-            documentParserService.build(elements);
+            documentParserService.parseToAscii(file);
         } catch (Exception e) {
             e.printStackTrace();
         }
