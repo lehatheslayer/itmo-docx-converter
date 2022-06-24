@@ -29,7 +29,7 @@ public class ConverterController {
     @PostMapping("/upload")
     public ResponseEntity<?> handleUploadFile(@RequestParam("file") MultipartFile file) throws Exception {
         UrlResource resource;
-        Path path = Paths.get(ParseService.ASCIIDOC_FILE_NAME);
+        Path path = Paths.get(ParseService.ZIP_FILE_NAME);
         try {
             this.documentParserService.parseToAscii(file);
             resource = new UrlResource(path.toUri());

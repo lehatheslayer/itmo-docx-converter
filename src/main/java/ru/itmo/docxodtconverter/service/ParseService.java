@@ -6,11 +6,13 @@ import org.apache.poi.xwpf.usermodel.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.*;
+import java.nio.file.*;
+import java.util.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 /**
  * Сервис, который парсит Word-документы в формат ASCIIDoc
@@ -21,6 +23,7 @@ public class ParseService {
      * Название выходного файла
      */
     public static final String ASCIIDOC_FILE_NAME = "output.adoc";
+    public static final String ZIP_FILE_NAME = "result.zip";
 
     /**
      * Символы пробела и переходов на следующую строку
@@ -52,15 +55,21 @@ public class ParseService {
     private static final String LIST_PREFIX = "- ";
 
     /**
-     * Символы таблиц
+     * Табличные префиксы
      */
     private static final String TABLE_PREFIX = "|===";
     private static final char TABLE_CELL_PREFIX = '|';
 
     /**
-     * Сообщение, заменяющее картинки
+     * Префикс и суффикс для иллюстраций
      */
-    private static final String PICTURE_NOTIFICATION = "There should be a picture here: ";
+    private static final String IMAGE_PREFIX = "image::";
+    private static final String IMAGE_SUFFIX = "[]";
+
+    /**
+     * Названия иллюстраций для добавления их в zip-архив
+     */
+    private final Set<String> pictures = new HashSet<>();
 
     /**
      * Метод парсит WORD-документы в ASCIIDoc формат
@@ -88,6 +97,8 @@ public class ParseService {
             throw new InvalidFormatException("Invalid format of file");
         } catch (IOException e) {
             throw new IOException(e.getMessage());
+        } finally {
+            madeZipArchive();
         }
 
     }
@@ -114,15 +125,18 @@ public class ParseService {
         }
 
         for (final XWPFRun run : runs) {
-            final String text = run.getText(0);
+            String text = run.getText(0);
             if (text == null || text.equals(" ")) {
                 final List<XWPFPicture> pictures = run.getEmbeddedPictures();
-                for (XWPFPicture picture : pictures) {
-                    sb.append(HIGHLIGHTED_SYMBOL)
-                      .append(PICTURE_NOTIFICATION)
-                      .append(picture.getPictureData().getFileName())
-                      .append(HIGHLIGHTED_SYMBOL)
-                      .append(SPACE_SYMBOL);
+                for (final XWPFPicture picture : pictures) {
+                    savePicture(picture);
+                    writer.append(IMAGE_PREFIX)
+                          .append(picture.getPictureData().getFileName())
+                          .append(IMAGE_SUFFIX)
+                          .append(DOUBLE_NEXT_LINE_SYMBOL);
+
+
+                    this.pictures.add(picture.getPictureData().getFileName());
                 }
 
                 continue;
@@ -165,6 +179,13 @@ public class ParseService {
         writer.write(sb.toString());
     }
 
+    private void savePicture(XWPFPicture picture) throws IOException {
+        ByteArrayInputStream bis = new ByteArrayInputStream(picture.getPictureData().getData());
+        BufferedImage bImage = ImageIO.read(bis);
+
+        ImageIO.write(bImage, "png", new File(picture.getPictureData().getFileName()));
+    }
+
     /**
      * Метод парсит таблицы из WORD-документа в массив массивов из содержимого таблицы
      *
@@ -205,5 +226,51 @@ public class ParseService {
         }
 
         writer.append(TABLE_PREFIX);
+    }
+
+    /**
+     * Создание Zip-архива и добавление в него файлов
+     *
+     * @throws IOException - выбрасывается при ошибках записи в файл
+     */
+    private void madeZipArchive() throws IOException {
+        final FileOutputStream fos = new FileOutputStream(ZIP_FILE_NAME);
+        final ZipOutputStream zipOut = new ZipOutputStream(fos);
+
+        addPicturesToZip(zipOut);
+        addAsciiDocToZip(zipOut);
+
+        zipOut.close();
+        fos.close();
+    }
+
+    /**
+     * Добавление AsciiDoc-документа в архив
+     *
+     * @param zipOut - производит добавление файлов в архив
+     * @throws IOException - выбрасывается при ошибках записи в файл
+     */
+    private void addAsciiDocToZip(final ZipOutputStream zipOut) throws IOException {
+        final File fileToZip = new File(ASCIIDOC_FILE_NAME);
+        final ZipEntry zipEntry = new ZipEntry(fileToZip.getName());
+        zipOut.putNextEntry(zipEntry);
+
+        Files.copy(fileToZip.toPath(), zipOut);
+    }
+
+    /**
+     * Добавление иллюстраций в архив
+     *
+     * @param zipOut - производит добавление файлов в архив
+     * @throws IOException - выбрасывается при ошибках записи в файл
+     */
+    private void addPicturesToZip(final ZipOutputStream zipOut) throws IOException {
+        for (final String picture : pictures) {
+            final File fileToZip = new File(picture);
+            final ZipEntry zipEntry = new ZipEntry(fileToZip.getName());
+            zipOut.putNextEntry(zipEntry);
+
+            Files.copy(fileToZip.toPath(), zipOut);
+        }
     }
 }
