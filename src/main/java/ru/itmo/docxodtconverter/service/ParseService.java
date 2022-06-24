@@ -10,15 +10,28 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
+/**
+ * Сервис, который парсит Word-документы в формат ASCIIDoc
+ */
 @Service
 public class ParseService {
+    /**
+     * Название выходного файла
+     */
     public static final String ASCIIDOC_FILE_NAME = "output.adoc";
 
+    /**
+     * Символы пробела и переходов на следующую строку
+     */
     private static final String NEXT_LINE_SYMBOL = "\n";
     private static final String DOUBLE_NEXT_LINE_SYMBOL = "\n\n";
     private static final char SPACE_SYMBOL = ' ';
 
+    /**
+     * Префиксы заголовков
+     */
     private static final String H1_PREFIX = "= ";
     private static final String H2_PREFIX = "== ";
     private static final String H3_PREFIX = "=== ";
@@ -26,14 +39,36 @@ public class ParseService {
     private static final String H5_PREFIX = "===== ";
     private static final String H6_PREFIX = "====== ";
 
+    /**
+     * Символы форматирования текста
+     */
     private static final char BOLD_SYMBOL = '*';
     private static final char ITALIC_SYMBOL = '_';
+    private static final char HIGHLIGHTED_SYMBOL = '#';
 
-    private static final String NUMBERED_SYMBOL = "- ";
+    /**
+     * Префиксы списков
+     */
+    private static final String LIST_PREFIX = "- ";
 
+    /**
+     * Символы таблиц
+     */
     private static final String TABLE_PREFIX = "|===";
     private static final char TABLE_CELL_PREFIX = '|';
 
+    /**
+     * Сообщение, заменяющее картинки
+     */
+    private static final String PICTURE_NOTIFICATION = "There should be a picture here: ";
+
+    /**
+     * Метод парсит WORD-документы в ASCIIDoc формат
+     *
+     * @param file - WORD-документ
+     * @throws InvalidFormatException - выбрасывается при неправильном формате файла
+     * @throws IOException - выбрасывается при ошибках записи в файл
+     */
     public void parseToAscii(MultipartFile file) throws InvalidFormatException, IOException {
         try (FileWriter writer = new FileWriter(ASCIIDOC_FILE_NAME, false)) {
             final XWPFDocument docxFile = new XWPFDocument(OPCPackage.open(file.getInputStream()));
@@ -57,19 +92,39 @@ public class ParseService {
 
     }
 
+    /**
+     * Метод, добавляющий текстовые данные в ASCIIDoc файл
+     *
+     * @param writer - объект класса FileWriter, который производит запись в файл
+     * @param paragraph - представление параграфа WORD-документа
+     * @throws IOException - выбрасывается при ошибках записи в файл
+     */
     private void writeText(final FileWriter writer, final XWPFParagraph paragraph) throws IOException {
         final List<XWPFRun> runs = paragraph.getRuns();
         final StringBuilder sb = new StringBuilder();
 
-        if (paragraph.getAlignment().getValue() == 2) {
+        if (paragraph.getCTPPr().isSetNumPr()) {
+            if (paragraph.getAlignment().getValue() == 2) {
+                sb.append(H2_PREFIX);
+            } else {
+                sb.append(LIST_PREFIX);
+            }
+        } else if (paragraph.getAlignment().getValue() == 2) {
             sb.append(H2_PREFIX);
-        } else if (paragraph.getCTPPr().isSetNumPr()) {
-            sb.append(NUMBERED_SYMBOL);
         }
 
         for (final XWPFRun run : runs) {
             final String text = run.getText(0);
             if (text == null || text.equals(" ")) {
+                final List<XWPFPicture> pictures = run.getEmbeddedPictures();
+                for (XWPFPicture picture : pictures) {
+                    sb.append(HIGHLIGHTED_SYMBOL)
+                      .append(PICTURE_NOTIFICATION)
+                      .append(picture.getPictureData().getFileName())
+                      .append(HIGHLIGHTED_SYMBOL)
+                      .append(SPACE_SYMBOL);
+                }
+
                 continue;
             }
 
@@ -79,9 +134,16 @@ public class ParseService {
             if (run.isItalic()) {
                 sb.append(ITALIC_SYMBOL);
             }
+            if (run.isHighlighted()) {
+                sb.append(HIGHLIGHTED_SYMBOL);
+            }
 
-            sb.append(text);
-            if (sb.charAt(sb.length() - 1) == ' ') {
+            if (run.isCapitalized()) {
+                sb.append(text.toUpperCase(Locale.ROOT));
+            } else {
+                sb.append(text);
+            }
+            if (sb.charAt(sb.length() - 1) == SPACE_SYMBOL) {
                 sb.deleteCharAt(sb.length() - 1);
             }
 
@@ -90,6 +152,9 @@ public class ParseService {
             }
             if (run.isItalic()) {
                 sb.append(ITALIC_SYMBOL);
+            }
+            if (run.isHighlighted()) {
+                sb.append(HIGHLIGHTED_SYMBOL);
             }
 
             sb.append(SPACE_SYMBOL);
@@ -100,6 +165,12 @@ public class ParseService {
         writer.write(sb.toString());
     }
 
+    /**
+     * Метод парсит таблицы из WORD-документа в массив массивов из содержимого таблицы
+     *
+     * @param table - представление WORD-таблицы
+     * @return - массив массивов из содержимого таблицы
+     */
     private List<List<String>> readTable(XWPFTable table) {
         final List<List<String>> tableMatrix = new ArrayList<>();
 
@@ -116,6 +187,13 @@ public class ParseService {
         return tableMatrix;
     }
 
+    /**
+     * Метод записывает таблицу в ASCIIDoc-файл
+     *
+     * @param writer - объект класса FileWriter, который производит запись в файл
+     * @param tableMatrix - массив массивов из содержимого таблицы
+     * @throws IOException - выбрасывается при ошибках записи в файл
+     */
     private void writeTable(FileWriter writer, List<List<String>> tableMatrix) throws IOException {
         writer.append(TABLE_PREFIX).append(NEXT_LINE_SYMBOL);
 
