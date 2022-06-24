@@ -24,6 +24,7 @@ public class ParseService {
      */
     public static final String ASCIIDOC_FILE_NAME = "output.adoc";
     public static final String ZIP_FILE_NAME = "result.zip";
+    public static final String MIGRATION_PROTOCOL_FILE = "protocol.txt";
 
     /**
      * Символы пробела и переходов на следующую строку
@@ -91,6 +92,7 @@ public class ParseService {
                 if (bodyElement.getElementType().equals(BodyElementType.TABLE)) {
                     final List<List<String>> tableMatrix = readTable((XWPFTable) bodyElement);
                     writeTable(writer, tableMatrix);
+                    createMigrationProtocol();
                 }
             }
         } catch (InvalidFormatException e) {
@@ -228,6 +230,13 @@ public class ParseService {
         writer.append(TABLE_PREFIX);
     }
 
+    private void createMigrationProtocol() throws IOException {
+        FileWriter writer = new FileWriter(MIGRATION_PROTOCOL_FILE);
+
+        writer.write("Успешно смигрировано все содержимое word-документа");
+        writer.close();
+    }
+
     /**
      * Создание Zip-архива и добавление в него файлов
      *
@@ -251,11 +260,16 @@ public class ParseService {
      * @throws IOException - выбрасывается при ошибках записи в файл
      */
     private void addAsciiDocToZip(final ZipOutputStream zipOut) throws IOException {
-        final File fileToZip = new File(ASCIIDOC_FILE_NAME);
-        final ZipEntry zipEntry = new ZipEntry(fileToZip.getName());
-        zipOut.putNextEntry(zipEntry);
+        final File fileToZip1 = new File(ASCIIDOC_FILE_NAME);
+        final File fileToZip2 = new File(MIGRATION_PROTOCOL_FILE);
 
-        Files.copy(fileToZip.toPath(), zipOut);
+        final ZipEntry zipEntry1 = new ZipEntry(fileToZip1.getName());
+        zipOut.putNextEntry(zipEntry1);
+        Files.copy(fileToZip1.toPath(), zipOut);
+
+        final ZipEntry zipEntry2 = new ZipEntry(fileToZip2.getName());
+        zipOut.putNextEntry(zipEntry2);
+        Files.copy(fileToZip2.toPath(), zipOut);
     }
 
     /**
