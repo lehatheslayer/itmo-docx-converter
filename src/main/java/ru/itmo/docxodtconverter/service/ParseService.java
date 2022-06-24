@@ -114,16 +114,6 @@ public class ParseService {
         final List<XWPFRun> runs = paragraph.getRuns();
         final StringBuilder sb = new StringBuilder();
 
-        if (paragraph.getCTPPr().isSetNumPr()) {
-            if (paragraph.getAlignment().getValue() == 2) {
-                sb.append(H2_PREFIX);
-            } else {
-                sb.append(LIST_PREFIX);
-            }
-        } else if (paragraph.getAlignment().getValue() == 2) {
-            sb.append(H2_PREFIX);
-        }
-
         for (final XWPFRun run : runs) {
             String text = run.getText(0);
             if (text == null || text.equals(" ")) {
@@ -140,6 +130,16 @@ public class ParseService {
                 }
 
                 continue;
+            }
+
+            if (paragraph.getCTPPr().isSetNumPr()) {
+                if (paragraph.getAlignment().getValue() == 2) {
+                    sb.append(H2_PREFIX);
+                } else {
+                    sb.append(LIST_PREFIX);
+                }
+            } else if (paragraph.getAlignment().getValue() == 2) {
+                sb.append(H2_PREFIX);
             }
 
             if (run.isBold()) {
