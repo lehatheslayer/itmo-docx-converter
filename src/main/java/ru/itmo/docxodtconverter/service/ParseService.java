@@ -13,7 +13,7 @@ import java.util.List;
 
 @Service
 public class ParseService {
-    private static final String ASCIIDOC_FILE_NAME = "output.adoc";
+    public static final String ASCIIDOC_FILE_NAME = "output.adoc";
 
     private static final String NEXT_LINE_SYMBOL = "\n";
     private static final String DOUBLE_NEXT_LINE_SYMBOL = "\n\n";
@@ -60,7 +60,6 @@ public class ParseService {
     private void writeText(final FileWriter writer, final XWPFParagraph paragraph) throws IOException {
         final List<XWPFRun> runs = paragraph.getRuns();
         final StringBuilder sb = new StringBuilder();
-        System.out.println(paragraph.getNumFmt());
 
         if (paragraph.getAlignment().getValue() == 2) {
             sb.append(H2_PREFIX);
