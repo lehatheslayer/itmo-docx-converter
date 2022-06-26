@@ -163,14 +163,14 @@ public class ParseService {
                 sb.deleteCharAt(sb.length() - 1);
             }
 
-            if (run.isBold()) {
-                sb.append(BOLD_SYMBOL);
+            if (run.isHighlighted()) {
+                sb.append(HIGHLIGHTED_SYMBOL);
             }
             if (run.isItalic()) {
                 sb.append(ITALIC_SYMBOL);
             }
-            if (run.isHighlighted()) {
-                sb.append(HIGHLIGHTED_SYMBOL);
+            if (run.isBold()) {
+                sb.append(BOLD_SYMBOL);
             }
 
             sb.append(SPACE_SYMBOL);
